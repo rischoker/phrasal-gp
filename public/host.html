@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phrasal GP — Projector</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>">
+<link rel="stylesheet" href="css/host.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="plates"></div>
+<div id="lobbyPlates"></div>
+
+<!-- LOBBY -->
+<div id="lobby" class="layer hidden">
+  <div class="brand">
+    <div class="logo"><span class="a">PHRASAL</span><span class="b">GP</span></div>
+    <div class="tag">Phrasal Verbs Grand Prix · A2 → C1</div>
+  </div>
+  <div id="join">
+    <h3>JOIN THE GRID</h3>
+    <div class="qr" id="qrBig"></div>
+    <div class="url" id="joinUrl"></div>
+    <div class="code"><small>ROOM CODE</small><span id="roomCode">----</span></div>
+  </div>
+  <div id="setup">
+    <div><h4>CIRCUIT</h4><div class="circuits" id="circuits"></div></div>
+    <div><h4>LEVEL</h4><div class="chips" id="levels"></div></div>
+    <div><h4>LAPS</h4><div class="chips" id="laps"></div></div>
+    <div><button id="startBtn" disabled>LIGHTS OUT<small id="startHint">WAITING FOR DRIVERS</small></button></div>
+  </div>
+</div>
+
+<!-- RACE HUD -->
+<div id="hud" class="layer hidden">
+  <div id="tower"><div class="head"><div class="logo"><span class="a">PHRASAL</span><span class="b">GP</span></div><div class="lapt">LAP <b id="tLap">1</b><span>/<i id="tLaps">5</i></span></div></div><div class="rows" id="towerRows"></div></div>
+  <div class="topbar"><div class="gp"><b id="gpName">GRAND PRIX</b><span id="gpLevel">LEVEL B1</span></div><div class="lap"><small>LAP</small><span class="n" id="lapN">1</span><span class="of">/ <span id="lapOf">5</span></span></div><div class="clock" id="clock">0:00.0</div></div>
+  <div class="roomc"><div class="qr" id="qrSmall"></div><div>RECONNECT<b id="roomCode2">----</b><button id="endBtn">END RACE</button></div></div>
+  <div id="side">
+    <div class="panel"><h5 class="p">FASTEST LAPS <small>⏱</small></h5><div id="fastList"><div class="empty">No laps yet</div></div></div>
+    <div class="panel"><h5 class="p">BEST SECTORS</h5><div id="secList"></div></div>
+    <div class="panel"><h5>POINTS <small>CORRECT ANSWERS</small></h5><div id="ptsList"></div></div>
+  </div>
+  <div id="feed"></div>
+  <div id="lights" class="hidden"><div class="col"><i></i><i></i></div><div class="col"><i></i><i></i></div><div class="col"><i></i><i></i></div><div class="col"><i></i><i></i></div><div class="col"><i></i><i></i></div></div>
+  <div id="banner"></div>
+  <div id="flag" class="hidden"><div class="box"><b>CHEQUERED FLAG</b><span id="flagTxt"></span></div></div>
+</div>
+<div id="flashscreen"></div>
+
+<!-- PODIUM -->
+<div id="podium" class="layer hidden">
+  <div class="winner"><small id="podGp">GRAND PRIX</small><b id="podWinner">WINNER</b></div>
+  <div class="actions"><button class="btn alt" id="reportBtn">RACE REPORT & FEEDBACK</button><button class="btn" id="againBtn">NEW RACE</button></div>
+</div>
+
+<!-- REPORT -->
+<div id="report" class="hidden">
+  <div class="rhead"><h2 id="repTitle">RACE REPORT</h2><div><button class="btn dark" id="repBack">BACK TO PODIUM</button> <button class="btn" id="repAgain">NEW RACE</button></div></div>
+  <div class="grid" id="repGrid"></div>
+</div>
+
+<div id="net" class="hidden">RECONNECTING TO SERVER…</div>
+<button id="tapsound">🔇 CLICK FOR SOUND</button>
+
+<script src="vendor/socket.io.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script type="module" src="js/host/main.js"></script>
+</body>
+</html>

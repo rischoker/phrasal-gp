@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0c14">
+<meta name="format-detection" content="telephone=no">
+<title>Phrasal GP</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>">
+<link rel="stylesheet" href="css/phone.css">
+</head>
+<body>
+<div id="app">
+  <!-- connection bar -->
+  <div id="net" class="hidden"><span id="netTxt">Reconnecting…</span><button id="netBtn">RECONNECT NOW</button></div>
+
+  <!-- JOIN -->
+  <section id="sJoin" class="screen">
+    <div class="logo"><span class="a">PHRASAL</span><span class="b">GP</span></div>
+    <p class="sub">PHRASAL VERBS GRAND PRIX</p>
+    <label>ROOM CODE</label>
+    <input id="inCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+    <label>YOUR NAME</label>
+    <input id="inName" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Name">
+    <button id="joinBtn" class="big">JOIN THE GRID</button>
+    <p id="joinErr" class="err"></p>
+  </section>
+
+  <!-- GARAGE / CAR PICK -->
+  <section id="sGarage" class="screen hidden">
+    <div class="me"><span class="dot"></span><b class="myName"></b><span class="room"></span></div>
+    <h2>CHOOSE YOUR CAR</h2>
+    <div id="cars" class="cars"></div>
+    <div class="wait" id="garageInfo">Waiting for the teacher to start…</div>
+  </section>
+
+  <!-- COUNTDOWN -->
+  <section id="sCount" class="screen hidden center">
+    <div class="me"><span class="dot"></span><b class="myName"></b></div>
+    <img id="countCar" class="bigcar" alt="">
+    <div class="lights"><i></i><i></i><i></i><i></i><i></i></div>
+    <h2 id="countTxt">GET READY</h2>
+    <p class="hint">Correct answer = faster car.<br>Wrong answer = you slow down.<br>5 in a row = POWER-UP!</p>
+  </section>
+
+  <!-- RACE -->
+  <section id="sRace" class="screen hidden">
+    <div class="hud">
+      <div class="pos"><small>POS</small><b id="hPos">-</b><span id="hOf">/-</span></div>
+      <div class="lap"><small>LAP</small><b id="hLap">1</b><span id="hLaps">/5</span></div>
+      <div class="strk"><small>STREAK</small><b id="hStreak">0</b></div>
+      <button id="powerBtn" class="hidden">⚡</button>
+    </div>
+    <div class="speed"><div id="speedBar"></div></div>
+    <div id="status" class="status"></div>
+    <div class="qcard">
+      <div class="qlvl" id="qLvl"></div>
+      <div class="q" id="qText"></div>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div id="fb" class="fb hidden"></div>
+  </section>
+
+  <!-- POWER-UP PICKER -->
+  <div id="power" class="overlay hidden">
+    <h2>POWER-UP!</h2>
+    <p>5 correct in a row — choose one:</p>
+    <div class="powers">
+      <button data-p="turbo"><span>🚀</span><b>TURBO</b><small>Super speed for you</small></button>
+      <button data-p="shrink"><span>⚡</span><b>MINI-RAY</b><small>Shrink &amp; slow everyone</small></button>
+      <button data-p="missile"><span>🎯</span><b>MISSILE</b><small>Hit the leader</small></button>
+      <button data-p="shield"><span>🛡️</span><b>SHIELD</b><small>Block the next attack</small></button>
+    </div>
+    <button id="powerLater" class="ghost">SAVE FOR LATER</button>
+  </div>
+
+  <!-- HIT -->
+  <div id="hit" class="hit hidden"></div>
+
+  <!-- FINISHED -->
+  <section id="sDone" class="screen hidden center">
+    <div class="me"><span class="dot"></span><b class="myName"></b></div>
+    <div class="flag"></div>
+    <h1 id="doneTxt">FINISHED!</h1>
+    <p class="hint">Look at the big screen 🏁</p>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="sRes" class="screen hidden">
+    <div class="me"><span class="dot"></span><b class="myName"></b></div>
+    <h1 id="resPos">P1</h1>
+    <div class="resbox">
+      <div class="acc" id="resAcc">0%</div>
+      <div id="resPass" class="pass"></div>
+      <div id="resStats" class="rstats"></div>
+      <p id="resHead" class="rhead"></p>
+      <div id="resMissed" class="missed"></div>
+    </div>
+    <p class="hint">Wait for the next race…</p>
+  </section>
+</div>
+<script src="vendor/socket.io.min.js"></script>
+<script src="js/phone.js"></script>
+</body>
+</html>
