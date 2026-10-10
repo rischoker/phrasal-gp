@@ -35,6 +35,7 @@ function fadeTo(a, target, ms = 600) {
     if (k >= 1) { clearInterval(a._fade); if (target === 0) a.pause(); }
   }, 40);
 }
+export function setDuck(v) { duck = v; applyDuck(); if (musicBus && ctx && song) musicBus.gain.setTargetAtTime((song === SONGS.race ? 0.22 : 0.32) * v, ctx.currentTime, 0.1); }
 function applyDuck() { if (fileSong) fadeTo(fileEl(fileSong), FILE_SONGS[fileSong].vol * duck, 250); }
 export function playVoice(name, delayMs = 0) {
   if (!ctx) return;

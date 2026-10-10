@@ -4,6 +4,7 @@ import { CIRCUITS, buildTrack } from '../track.js';
 import { RaceView } from './race.js';
 import { LobbyView } from './lobby.js';
 import { PodiumView, fmtTime } from './podium.js';
+import * as C from './commentator.js';
 import { initAudio, playSong, sfx, setMuted, isMuted, playVoice, preloadAudio } from './audio.js';
 
 const $ = id => document.getElementById(id);
@@ -108,6 +109,8 @@ async function enterLobby(st, prev) {
   if (prev && prev.players && st.players.length > prev.players.length) {
     sfx.join();
     if (Date.now() - (enterLobby.lastVoice || 0) > 6000) { enterLobby.lastVoice = Date.now(); playVoice('choose', 350); }
+    const nw = st.players.filter(p => !prev.players.some(q => q.id === p.id));
+    nw.forEach((p, i) => setTimeout(() => C.say(C.L.welcome, { name: p.name }, 2), 2300 + i * 1500));
   }
   await lobbyView.setPlayers(st.players, st.cars);
   // kick buttons
@@ -157,7 +160,7 @@ async function enterRace(st) {
     showLayer('hud');
     $('lobbyPlates').classList.add('hidden');
     disposePodium(); disposeRace();
-    raceKey = key; lastStand = null; lightsShown = 0; readyPlayed = false; lastRecords = null; greenShown = st.state === 'race' && serverNow() - st.race.greenAt > 3000; flagShown = !!st.race.flagAt;
+    raceKey = key; lastStand = null; lightsShown = 0; readyPlayed = false; lastRecords = null; Object.assign(com, { green: Date.now() + 8000, leader: null, finalLap: false, pos: {}, lastFill: Date.now() }); C.stop(); greenShown = st.state === 'race' && serverNow() - st.race.greenAt > 3000; flagShown = !!st.race.flagAt;
     $('flag').classList.add('hidden'); $('feed').innerHTML = ''; $('towerRows').innerHTML = ''; towerEls.clear();
     const circuit = CIRCUITS.find(c => c.id === st.settings.circuitId) || CIRCUITS[0];
     $('gpName').textContent = circuit.name; $('gpLevel').textContent = (st.settings.level === 'MIX' ? 'LEVEL A2–C1' : 'LEVEL ' + st.settings.level) + ' · PHRASAL VERBS';
@@ -179,6 +182,8 @@ function goGreen() {
   $('lights').classList.remove('hidden'); $('lights').classList.add('go');
   if (raceView) raceView.setStartLights(5, true);
   banner('LIGHTS OUT', 'AND AWAY WE GO!');
+  com.green = Date.now();
+  setTimeout(() => C.say(C.L.start, { gp: $('gpName').textContent }, 3), 1300);
   sfx.go();
   playSong('race');
   setTimeout(() => { $('lights').classList.add('hidden'); $('lights').classList.remove('go'); if (raceView) raceView.setStartLights(0); }, 1600);
@@ -249,6 +254,26 @@ function onStandings(st) {
   $('ptsList').innerHTML = pts.map((r, i) => { const tot = r.correct + r.wrong; return '<div class="prow" style="--team:' + r.color + '"><span class="r">' + (i + 1) + '</span><span class="b"></span><span class="n">' + esc(r.name) + (r.streak >= 3 ? ' 🔥' + r.streak : '') + '</span><span class="v ok">' + r.correct + '</span><span class="acc">' + (tot ? Math.round(r.correct / tot * 100) + '%' : '—') + '</span></div>'; }).join('');
   if (raceView) raceView.setPositions(st.rows);
   if (st.flag && !flagShown) showFlag(st.rows[0]);
+  commentStandings(st);
+}
+
+// ---------- commentator triggers ----------
+const com = { green: 0, leader: null, finalLap: false, pos: {}, lastFill: 0 };
+function commentStandings(st) {
+  if (!room || room.state !== 'race' || st.flag) { com.leader = st.rows[0] && st.rows[0].id; return; }
+  const now = Date.now(), early = now - com.green < 6000;
+  const lead = st.rows[0];
+  if (lead && com.leader && lead.id !== com.leader && !early) C.say(C.L.lead, { name: lead.name }, 2, 'lead', 5000);
+  com.leader = lead && lead.id;
+  if (!com.finalLap && st.laps > 1 && st.leaderLap >= st.laps && lead) { com.finalLap = true; C.say(C.L.finalLap, { name: lead.name }, 2); }
+  const p2 = st.rows[1];
+  if (p2 && !early) { const g = parseFloat(String(p2.gap).replace('+', '')); if (!isNaN(g) && g < 0.4 && !/LAP/.test(p2.gap)) C.say(C.L.battle, { p1: lead.name, p2: p2.name }, 1, 'battle', 25000); }
+  st.rows.forEach(r => { const before = com.pos[r.id]; if (!early && before && r.pos <= 3 && r.pos < before - 0 && r.pos > 1 && before - r.pos >= 1) C.say(C.L.midfield, { name: r.name, pos: r.pos }, 1, 'mid' + r.id, 15000); com.pos[r.id] = r.pos; });
+  if (now - com.lastFill > 22000 && !early) {
+    com.lastFill = now;
+    const top = st.rows.slice().sort((a, b) => b.correct - a.correct)[0];
+    if (top && top.correct >= 3) C.say(C.L.points, { name: top.name, n: top.correct }, 1);
+  }
 }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -271,17 +296,21 @@ function onEvent(ev) {
   if (ev.type === 'answer') {
     raceView.answerPop(ev.id, ev.correct);
     if (ev.correct) sfx.ok();
-    if (ev.power) { feed('<b>' + name + '</b> 5 IN A ROW! POWER-UP READY ⚡', col); sfx.streak(); }
+    if (ev.power) { feed('<b>' + name + '</b> 5 IN A ROW! POWER-UP READY ⚡', col); sfx.streak(); C.say(C.L.streak, { name: p ? p.name : '' }, 1, 'streak' + ev.id, 15000); }
   } else if (ev.type === 'lap') {
     if (ev.fastest) {
       feed('FASTEST LAP · <b>' + name + '</b> · ' + fmtTime(ev.time), col, 'purple'); sfx.fastest();
+      if (ev.lap >= 2) C.say(C.L.fastest, { name: p ? p.name : '' }, 1, 'fastest', 12000);
       const el = towerEls.get(ev.id); if (el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
     }
   } else if (ev.type === 'finish') {
     if (ev.pos === 1) showFlag({ name: p ? p.name : '?' });
-    else feed('<b>' + name + '</b> FINISHES P' + ev.pos, col);
+    else { feed('<b>' + name + '</b> FINISHES P' + ev.pos, col); C.say(C.L.finish, { name: p ? p.name : '', pos: ev.pos }, 2); }
   } else if (ev.type === 'power') {
     raceView.powerFx(ev);
+    { const nm = p ? p.name : ''; const tg = pl[ev.targets[0] || ev.blocked[0]];
+      if (ev.power === 'missile') { C.say(C.L.missile, { name: nm, target: tg ? tg.name : 'the leader' }, 2); if (ev.blocked.length) C.say(C.L.blocked, { target: tg ? tg.name : '' }, 2); }
+      else C.say(C.L[ev.power], { name: nm }, ev.power === 'shrink' ? 2 : 1); }
     if (ev.power === 'shrink') { const fl = $('flashscreen'); fl.style.opacity = '0.75'; setTimeout(() => fl.style.opacity = '0', 140); }
     let txt = '<b>' + name + '</b> USED ' + POWER_TXT[ev.power];
     if (ev.power === 'missile') { const t = pl[ev.targets[0] || ev.blocked[0]]; if (t) txt += ' ON <b>' + esc(t.name) + '</b>'; }
@@ -296,6 +325,7 @@ function showFlag(row) {
   $('flagTxt').textContent = (row.name || '').toUpperCase() + ' WINS THE ' + ($('gpName').textContent || '').toUpperCase();
   $('flag').classList.remove('hidden');
   sfx.horn(); sfx.cheer(3);
+  C.say(C.L.win, { name: row.name || '', gp: $('gpName').textContent }, 3);
   setTimeout(() => $('flag').classList.add('hidden'), 4000);
 }
 
@@ -319,6 +349,7 @@ async function enterPodium(results) {
   const w = results.rows[0];
   $('podGp').textContent = (results.circuit || '').toUpperCase() + ' · WINNER';
   $('podWinner').textContent = w ? w.name : '';
+  if (w) setTimeout(() => { if (view === 'podium') C.say(C.L.podium, { name: w.name, gp: results.circuit || 'Grand Prix' }, 3); }, 7600);
   playSong('podium');
   sfx.cheer(3);
   showRecords();
@@ -364,6 +395,8 @@ function openLeaderboard(circuit, laps) {
     $('lbAnswers').innerHTML = d.answers.length ? d.answers.map((x, i) => row(i, x, '✓ ' + x.correct, false, '<span class="acc">' + x.accuracy + '%</span>')).join('') : none;
   }).catch(() => { $('lbRaces').innerHTML = $('lbLapsTop').innerHTML = $('lbAnswers').innerHTML = '<div class="empty">Leaderboard unavailable right now</div>'; });
 }
+function renderComBtn() { const b = $('comBtn'); if (!b) return; b.textContent = C.isCommentaryOn() ? '🎙 COMMENTATOR: ON' : '🎙 COMMENTATOR: OFF'; b.title = C.voiceName() ? 'Voice: ' + C.voiceName() : 'No English voice found in this browser'; b.classList.toggle('off', !C.isCommentaryOn()); }
+if ($('comBtn')) { $('comBtn').onclick = () => { C.setCommentary(!C.isCommentaryOn()); renderComBtn(); if (C.isCommentaryOn()) C.say('Good afternoon, and welcome to Phrasal G P!', {}, 3); }; setTimeout(renderComBtn, 500); if (window.speechSynthesis) window.speechSynthesis.addEventListener && window.speechSynthesis.addEventListener('voiceschanged', renderComBtn); }
 $('lbLobbyBtn').onclick = () => { sfx.click(); openLeaderboard(room ? room.settings.circuitId : null, room ? room.settings.laps : null); };
 $('lbPodBtn').onclick = () => { sfx.click(); openLeaderboard(lastResults ? lastResults.circuitId : null, lastResults ? lastResults.laps : null); };
 $('lbClose').onclick = () => $('lb').classList.add('hidden');
@@ -458,7 +491,8 @@ function enableSound() {
 $('tapsound').onclick = e => { e.stopPropagation(); enableSound(); };
 addEventListener('pointerdown', () => { if (!$('tapsound').classList.contains('hidden')) enableSound(); }, true);
 addEventListener('keydown', e => {
-  if (e.key === 'm' || e.key === 'M') setMuted(!isMuted());
+  if (e.key === 'm' || e.key === 'M') { setMuted(!isMuted()); if (isMuted()) C.stop(); }
+  if (e.key === 'c' || e.key === 'C') { C.setCommentary(!C.isCommentaryOn()); renderComBtn(); }
   if (e.key === 'f' || e.key === 'F') { if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); else document.exitFullscreen(); }
 });
 // demo podium (for testing the ceremony without racing): /?host=1&demo=podium
