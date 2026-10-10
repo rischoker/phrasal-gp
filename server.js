@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { Server } = require('socket.io');
 const { BANK, LEVELS } = require('./data/questions');
+const LB = require('./leaderboard');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -19,6 +20,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', req.query.host ? 'host.html' : 'phone.html'));
 });
 app.get('/host', (req, res) => res.redirect('/?host=1'));
+app.get('/api/leaderboard', async (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  const laps = LAP_OPTIONS.includes(+req.query.laps) ? +req.query.laps : 5;
+  const circuit = String(req.query.circuit || 'boston').replace(/[^a-z0-9-]/gi, '').slice(0, 30);
+  try { res.json(await LB.top(circuit, laps)); } catch (e) { console.error('leaderboard', e.message); res.status(502).json({ enabled: LB.enabled(), error: 'unavailable' }); }
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders(res, p) {
     if (/\.(glb|png|woff2)$/.test(p)) res.set('Cache-Control', 'public, max-age=604800');
@@ -400,6 +407,18 @@ function finishRace(room) {
   room.state = 'finished';
   for (const p of players) p.q = null;
   emitRoom(room);
+  // global leaderboard (skipped in fast test mode unless PGP_LB_TEST=1)
+  if (TEST_SPEED === 1 || process.env.PGP_LB_TEST) {
+    const results = room.results;
+    LB.saveRace(results, players.length).then(records => {
+      results.records = records;
+      if (room.hostSocket) io.to(room.hostSocket).emit('race:records', records);
+      for (const p of room.players.values()) {
+        const mine = records.filter(r => r.name === p.name);
+        if (p.socketId && mine.length) io.to(p.socketId).emit('p:records', mine);
+      }
+    }).catch(e => console.error('leaderboard save failed:', e.message));
+  }
 }
 
 // ---------- answers & powers ----------

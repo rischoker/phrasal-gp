@@ -4,7 +4,7 @@ import { CIRCUITS, buildTrack } from '../track.js';
 import { RaceView } from './race.js';
 import { LobbyView } from './lobby.js';
 import { PodiumView, fmtTime } from './podium.js';
-import { initAudio, playSong, sfx, setMuted, isMuted } from './audio.js';
+import { initAudio, playSong, sfx, setMuted, isMuted, playVoice, preloadAudio } from './audio.js';
 
 const $ = id => document.getElementById(id);
 const store = {
@@ -23,6 +23,7 @@ let W = innerWidth, H = innerHeight;
 // ---------- state ----------
 let room = null, offset = 0, view = null;
 let lobbyView = null, raceView = null, podiumView = null, raceKey = null, raceBuilding = null;
+let readyPlayed = false, lastRecords = null;
 let lastStand = null, lightsShown = 0, greenShown = false, flagShown = false, podiumTimer = null, lastResults = null;
 const playersById = () => Object.fromEntries((room ? room.players : []).map(p => [p.id, p]));
 const serverNow = () => Date.now() + offset;
@@ -52,6 +53,7 @@ socket.on('room:state', onState);
 socket.on('race:tick', m => { offset = offset * 0.9 + (m.t - Date.now()) * 0.1; if (raceView) raceView.onTick(m); });
 socket.on('race:standings', onStandings);
 socket.on('race:event', onEvent);
+socket.on('race:records', recs => { lastRecords = recs; showRecords(); });
 
 // ---------- QR ----------
 let qrFor = null;
@@ -103,7 +105,10 @@ async function enterLobby(st, prev) {
   buildSetup(st);
   const cName = (CIRCUITS.find(c => c.id === st.settings.circuitId) || CIRCUITS[0]).name;
   lobbyView.setTitle(cName);
-  if (prev && prev.players && st.players.length > prev.players.length) sfx.join();
+  if (prev && prev.players && st.players.length > prev.players.length) {
+    sfx.join();
+    if (Date.now() - (enterLobby.lastVoice || 0) > 6000) { enterLobby.lastVoice = Date.now(); playVoice('choose', 350); }
+  }
   await lobbyView.setPlayers(st.players, st.cars);
   // kick buttons
   lobbyView.slots.forEach(s => {
@@ -152,7 +157,7 @@ async function enterRace(st) {
     showLayer('hud');
     $('lobbyPlates').classList.add('hidden');
     disposePodium(); disposeRace();
-    raceKey = key; lastStand = null; lightsShown = 0; greenShown = st.state === 'race' && serverNow() - st.race.greenAt > 3000; flagShown = !!st.race.flagAt;
+    raceKey = key; lastStand = null; lightsShown = 0; readyPlayed = false; lastRecords = null; greenShown = st.state === 'race' && serverNow() - st.race.greenAt > 3000; flagShown = !!st.race.flagAt;
     $('flag').classList.add('hidden'); $('feed').innerHTML = ''; $('towerRows').innerHTML = ''; towerEls.clear();
     const circuit = CIRCUITS.find(c => c.id === st.settings.circuitId) || CIRCUITS[0];
     $('gpName').textContent = circuit.name; $('gpLevel').textContent = (st.settings.level === 'MIX' ? 'LEVEL A2–C1' : 'LEVEL ' + st.settings.level) + ' · PHRASAL VERBS';
@@ -183,13 +188,15 @@ function countdownTick() {
   if (view !== 'race' || !room || room.state !== 'countdown' || !room.race) return;
   const ms = room.race.greenAt - serverNow();
   const n = Math.max(0, Math.min(5, 5 - Math.ceil((ms - 1000) / 1000) ));
+  // "GET READY… 3, 2, 1, GO!" — the GO in the clip starts 3.85 s in, timed to lights out
+  if (!readyPlayed && ms < 4600 && ms > 2000) { readyPlayed = true; playVoice('ready', ms - 3850); }
   const lights = $('lights');
   if (ms < 6200) lights.classList.remove('hidden');
   if (n !== lightsShown) {
     lightsShown = n;
     lights.querySelectorAll('.col').forEach((c, i) => c.querySelectorAll('i').forEach(x => x.classList.toggle('on', i < n)));
     if (raceView) raceView.setStartLights(n);
-    if (n > 0) sfx.beep(false);
+
   }
 }
 
@@ -314,7 +321,52 @@ async function enterPodium(results) {
   $('podWinner').textContent = w ? w.name : '';
   playSong('podium');
   sfx.cheer(3);
+  showRecords();
 }
+
+// ---------- global leaderboard ----------
+let lbFilter = { circuit: CIRCUITS[0].id, laps: 5 };
+function showRecords() {
+  const box = $('records'); if (!box) return;
+  box.innerHTML = '';
+  if (view !== 'podium' || !lastRecords || !lastRecords.length) return;
+  const sorted = lastRecords.slice().sort((a, b) => a.rank - b.rank).slice(0, 5);
+  sorted.forEach((r, i) => setTimeout(() => {
+    const d = document.createElement('div'); d.className = 'rec';
+    d.innerHTML = '<small>' + (r.rank === 1 ? (r.kind === 'race' ? 'NEW TRACK RECORD!' : 'NEW LAP RECORD!') : 'GLOBAL TOP 10 · ' + (r.kind === 'race' ? 'RACE' : 'LAP')) + '</small>#' + r.rank + ' ' + esc(r.name.toUpperCase()) + ' · ' + fmtTime(r.ms);
+    box.appendChild(d); if (r.rank === 1) sfx.fastest(); else sfx.lap();
+  }, 8000 + i * 700));
+}
+function openLeaderboard(circuit, laps) {
+  if (circuit) lbFilter.circuit = circuit; if (laps) lbFilter.laps = laps;
+  const cc = $('lbCircuits'), lc = $('lbLaps');
+  if (!cc.children.length) {
+    CIRCUITS.forEach(c => { const b = document.createElement('button'); b.className = 'chip'; b.dataset.v = c.id; b.textContent = c.short; b.onclick = () => { sfx.click(); openLeaderboard(c.id); }; cc.appendChild(b); });
+    [5, 10, 20, 30].forEach(l => { const b = document.createElement('button'); b.className = 'chip'; b.dataset.v = l; b.textContent = l + ' LAPS'; b.onclick = () => { sfx.click(); openLeaderboard(null, l); }; lc.appendChild(b); });
+  }
+  for (const b of cc.children) b.classList.toggle('on', b.dataset.v === lbFilter.circuit);
+  for (const b of lc.children) b.classList.toggle('on', +b.dataset.v === lbFilter.laps);
+  const circ = CIRCUITS.find(c => c.id === lbFilter.circuit) || CIRCUITS[0];
+  $('lbTitle').innerHTML = 'GLOBAL LEADERBOARD <span>' + esc(circ.name.toUpperCase()) + ' · ' + lbFilter.laps + ' LAPS</span>';
+  $('lbSub1').textContent = circ.short; $('lbSub2').textContent = circ.short; $('lbSub3').textContent = 'ALL CIRCUITS · ' + lbFilter.laps + ' LAPS';
+  const loading = '<div class="empty">Loading…</div>';
+  $('lbRaces').innerHTML = $('lbLapsTop').innerHTML = $('lbAnswers').innerHTML = loading;
+  $('lb').classList.remove('hidden');
+  const want = lbFilter.circuit + ':' + lbFilter.laps;
+  fetch('/api/leaderboard?circuit=' + lbFilter.circuit + '&laps=' + lbFilter.laps).then(r => r.json()).then(d => {
+    if (want !== lbFilter.circuit + ':' + lbFilter.laps) return;
+    if (!d.enabled) { $('lbRaces').innerHTML = $('lbLapsTop').innerHTML = $('lbAnswers').innerHTML = '<div class="empty">Leaderboard not configured on the server</div>'; return; }
+    const mine = (name, ms) => lastResults && lastResults.rows.some(r => r.name === name && (r.time === ms || r.bestLap === ms || ms == null));
+    const row = (i, x, val, isMine, extra) => '<div class="prow' + (i < 3 ? ' gold' : '') + (isMine ? ' me' : '') + '"><span class="r">' + (i + 1) + '</span><img src="assets/thumbs/' + esc(x.car) + '.png" alt=""><span class="n">' + esc(x.name) + ' <span class="lv">' + esc(x.level === 'MIX' ? 'A2–C1' : x.level) + '</span></span><span class="v">' + val + '</span>' + (extra || '') + '<span class="d">' + (x.created_at ? new Date(x.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '') + '</span></div>';
+    const none = '<div class="empty">No results yet — be the first!</div>';
+    $('lbRaces').innerHTML = d.races.length ? d.races.map((x, i) => row(i, x, fmtTime(x.race_ms), mine(x.name, x.race_ms))).join('') : none;
+    $('lbLapsTop').innerHTML = d.laps_top.length ? d.laps_top.map((x, i) => row(i, x, fmtTime(x.best_lap_ms), mine(x.name, x.best_lap_ms))).join('') : none;
+    $('lbAnswers').innerHTML = d.answers.length ? d.answers.map((x, i) => row(i, x, '✓ ' + x.correct, false, '<span class="acc">' + x.accuracy + '%</span>')).join('') : none;
+  }).catch(() => { $('lbRaces').innerHTML = $('lbLapsTop').innerHTML = $('lbAnswers').innerHTML = '<div class="empty">Leaderboard unavailable right now</div>'; });
+}
+$('lbLobbyBtn').onclick = () => { sfx.click(); openLeaderboard(room ? room.settings.circuitId : null, room ? room.settings.laps : null); };
+$('lbPodBtn').onclick = () => { sfx.click(); openLeaderboard(lastResults ? lastResults.circuitId : null, lastResults ? lastResults.laps : null); };
+$('lbClose').onclick = () => $('lb').classList.add('hidden');
 
 $('reportBtn').onclick = () => { sfx.click(); showReport(lastResults); };
 $('repBack').onclick = () => { $('report').classList.add('hidden'); };
@@ -399,7 +451,7 @@ resize();
 
 // ---------- audio / keys ----------
 function enableSound() {
-  initAudio();
+  initAudio(); preloadAudio();
   $('tapsound').classList.add('hidden');
   if (view === 'lobby') playSong('lobby'); else if (view === 'race' && room && room.state === 'race') playSong('race'); else if (view === 'podium') playSong('podium');
 }

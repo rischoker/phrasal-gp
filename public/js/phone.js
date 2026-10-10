@@ -48,6 +48,11 @@
   socket.on('p:race', onRace);
   socket.on('p:finished', function (d) { showScreen('sDone'); $('doneTxt').textContent = 'P' + d.pos + '!'; vibrate([60, 60, 200]); });
   socket.on('p:hit', function (d) { showHit(d); });
+  socket.on('p:records', function (recs) {
+    var html = '';
+    recs.forEach(function (r) { html += '<div class="rec">🏆 GLOBAL #' + r.rank + ' · ' + (r.kind === 'race' ? 'RACE TIME' : 'FASTEST LAP') + '</div>'; });
+    $('resRecords').innerHTML = html; vibrate([100, 50, 100, 50, 300]);
+  });
   socket.on('p:kicked', function () { joined = false; wantJoin = false; showScreen('sJoin'); $('joinErr').textContent = 'The teacher removed you from the grid.'; });
   socket.on('p:replaced', function () { netBar(true, 'Opened on another tab/phone'); });
 

@@ -18,6 +18,7 @@
   <div class="brand">
     <div class="logo"><span class="a">PHRASAL</span><span class="b">GP</span></div>
     <div class="tag">Phrasal Verbs Grand Prix · A2 → C1</div>
+    <button class="lbBtn" id="lbLobbyBtn">🏆 GLOBAL LEADERBOARD</button>
   </div>
   <div id="join">
     <h3>JOIN THE GRID</h3>
@@ -53,10 +54,20 @@
 <!-- PODIUM -->
 <div id="podium" class="layer hidden">
   <div class="winner"><small id="podGp">GRAND PRIX</small><b id="podWinner">WINNER</b></div>
-  <div class="actions"><button class="btn alt" id="reportBtn">RACE REPORT & FEEDBACK</button><button class="btn" id="againBtn">NEW RACE</button></div>
+  <div id="records"></div>
+  <div class="actions"><button class="btn alt" id="reportBtn">RACE REPORT & FEEDBACK</button><button class="btn dark" id="lbPodBtn">🏆 LEADERBOARD</button><button class="btn" id="againBtn">NEW RACE</button></div>
 </div>
 
 <!-- REPORT -->
+<div id="lb" class="hidden">
+  <div class="rhead"><h2 id="lbTitle">GLOBAL LEADERBOARD</h2><div><button class="btn dark" id="lbClose">CLOSE</button></div></div>
+  <div class="lbfilters"><div class="chips" id="lbCircuits"></div><div class="chips" id="lbLaps"></div></div>
+  <div class="lbgrid">
+    <div class="panel"><h5 class="p">FASTEST RACES <small id="lbSub1"></small></h5><div id="lbRaces"></div></div>
+    <div class="panel"><h5 class="p">FASTEST LAPS <small id="lbSub2"></small></h5><div id="lbLapsTop"></div></div>
+    <div class="panel"><h5>MOST CORRECT ANSWERS <small id="lbSub3"></small></h5><div id="lbAnswers"></div></div>
+  </div>
+</div>
 <div id="report" class="hidden">
   <div class="rhead"><h2 id="repTitle">RACE REPORT</h2><div><button class="btn dark" id="repBack">BACK TO PODIUM</button> <button class="btn" id="repAgain">NEW RACE</button></div></div>
   <div class="grid" id="repGrid"></div>

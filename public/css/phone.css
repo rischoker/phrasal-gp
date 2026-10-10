@@ -103,3 +103,4 @@ h1 { font-family: Orbitron, 'Arial Black', sans-serif; font-size: 44px; margin: 
 .rhead { font-weight: 700; font-size: 17px; border-left: 4px solid #e10600; padding-left: 10px; }
 .missed div { border-top: 1px solid #2a2d42; padding: 6px 0; font-size: 15px; color: #c9cde0; }
 .missed b { color: #ffb4bb; }
+.rec { background: #c79a00; color: #fff; font-weight: 900; text-align: center; padding: 8px; margin-top: 8px; letter-spacing: 1px; }

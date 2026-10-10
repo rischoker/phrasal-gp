@@ -141,7 +141,7 @@ export class PodiumView {
     const ang = Math.sin(t * 0.12) * 0.25;
     const dist = 8 + e * 8.5;
     this.cam.position.set(Math.sin(ang) * dist, 3.2 + e * 2.2, Math.cos(ang) * dist);
-    this.cam.lookAt(0, 2.6 + (1 - e) * 1.0, 0);
+    this.cam.lookAt(0, 3.0 + (1 - e) * 0.8, 0);
   }
 
   updatePlates(w, h) {

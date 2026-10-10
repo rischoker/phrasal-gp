@@ -199,3 +199,22 @@ button { font-family: inherit; cursor: pointer; }
 .rcard .missed { grid-column: 1 / -1; font-size: calc(var(--u)*.88); color: #cfd3e3; }
 .rcard .missed div { border-top: 1px solid var(--line); padding: 2px 0; }
 .rcard .missed b { color: #ffb4bb; }
+
+/* ---------- GLOBAL LEADERBOARD ---------- */
+.lbBtn { margin-top: calc(var(--u)*.8); background: var(--bg2); color: #ffd700; border: 1px solid rgba(255,215,0,.35); font-weight: 900; letter-spacing: .12em; font-size: calc(var(--u)*.85); padding: calc(var(--u)*.4) calc(var(--u)*.9); }
+#lb { position: fixed; inset: 0; background: rgba(5, 6, 11, .97); overflow: auto; padding: calc(var(--u)*1.4) calc(var(--u)*2); z-index: 25; }
+#lb .rhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: calc(var(--u)*.8); }
+#lb .rhead h2 { margin: 0; font-family: Orbitron, sans-serif; font-size: calc(var(--u)*2); font-style: italic; text-transform: uppercase; }
+#lb .rhead h2 span { color: var(--dim); font-family: 'Titillium Web'; font-style: normal; font-size: .55em; letter-spacing: .2em; margin-left: calc(var(--u)*1); }
+.lbfilters { display: flex; justify-content: space-between; gap: calc(var(--u)*1); margin-bottom: calc(var(--u)*1); flex-wrap: wrap; }
+.lbfilters .chip { font-size: calc(var(--u)*.95); }
+.lbgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--u)*1); }
+.lbgrid .prow { font-size: calc(var(--u)*1.15); padding: calc(var(--u)*.4) calc(var(--u)*.7); }
+.lbgrid .prow img { height: calc(var(--u)*1.7); }
+.lbgrid .prow .lv { font-size: .7em; font-weight: 900; background: #2a2b3a; padding: 0 5px; color: var(--dim); }
+.lbgrid .prow.me { background: rgba(255, 215, 0, .16); }
+.lbgrid .prow.gold .r { color: #ffd700; }
+.lbgrid .prow .d { color: var(--dim); font-size: .7em; width: calc(var(--u)*3.4); text-align: right; }
+#records { position: absolute; top: calc(var(--u)*1.4); right: calc(var(--u)*1.4); display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.rec { background: linear-gradient(90deg, #6b4e00, #c79a00); color: #fff; font-weight: 900; padding: calc(var(--u)*.45) calc(var(--u)*1); font-size: calc(var(--u)*1.05); letter-spacing: .05em; animation: fin .5s; box-shadow: 0 0 20px rgba(255, 215, 0, .35); }
+.rec small { display: block; font-size: .7em; letter-spacing: .2em; opacity: .85; }

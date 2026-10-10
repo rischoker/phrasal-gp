@@ -13,7 +13,39 @@ export function initAudio() {
   const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   timer = setInterval(schedule, 25);
 }
-export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.05); }
+export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.05); for (const k in fileEls) fileEls[k].muted = m; for (const k in voiceEls) voiceEls[k].muted = m; }
+
+// ---- recorded music & voice lines (served by our own server: proxy-safe) ----
+const FILE_SONGS = { lobby: { src: 'assets/audio/lobby.mp3', vol: 0.55 }, race: { src: 'assets/audio/race.mp3', vol: 0.42 } };
+const VOICES = { choose: 'assets/audio/choose-your-car.mp3', ready: 'assets/audio/get-ready.mp3' };
+const fileEls = {}, voiceEls = {};
+let fileSong = null, duck = 1;
+function fileEl(name) {
+  if (!fileEls[name]) { const a = new Audio(FILE_SONGS[name].src); a.loop = true; a.preload = 'auto'; a.volume = 0; a.muted = muted; fileEls[name] = a; }
+  return fileEls[name];
+}
+export function preloadAudio() { for (const k in FILE_SONGS) fileEl(k); for (const k in VOICES) voiceEl(k); }
+function voiceEl(name) { if (!voiceEls[name]) { const a = new Audio(VOICES[name]); a.preload = 'auto'; a.muted = muted; voiceEls[name] = a; } return voiceEls[name]; }
+function fadeTo(a, target, ms = 600) {
+  clearInterval(a._fade);
+  const start = a.volume, t0 = performance.now();
+  a._fade = setInterval(() => {
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    a.volume = Math.max(0, Math.min(1, start + (target - start) * k));
+    if (k >= 1) { clearInterval(a._fade); if (target === 0) a.pause(); }
+  }, 40);
+}
+function applyDuck() { if (fileSong) fadeTo(fileEl(fileSong), FILE_SONGS[fileSong].vol * duck, 250); }
+export function playVoice(name, delayMs = 0) {
+  if (!ctx) return;
+  const a = voiceEl(name);
+  setTimeout(() => {
+    try { a.currentTime = 0; } catch (e) { }
+    duck = 0.35; applyDuck();
+    a.onended = () => { duck = 1; applyDuck(); };
+    a.play().catch(() => { duck = 1; applyDuck(); });
+  }, Math.max(0, delayMs));
+}
 export function isMuted() { return muted; }
 
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -106,6 +138,19 @@ function schedule() {
 }
 export function playSong(name) {
   if (!ctx) return;
+  // recorded tracks for lobby / race
+  if (fileSong && fileSong !== name) { fadeTo(fileEl(fileSong), 0, 700); fileSong = null; }
+  if (FILE_SONGS[name]) {
+    if (song) { song = null; }
+    if (fileSong !== name) {
+      fileSong = name;
+      const a = fileEl(name);
+      if (name === 'race') { try { a.currentTime = 0; } catch (e) { } }
+      a.play().catch(() => {});
+      fadeTo(a, FILE_SONGS[name].vol * duck, 900);
+    }
+    return;
+  }
   const s = SONGS[name] || null;
   if (song === s) return;
   // quick fade swap
