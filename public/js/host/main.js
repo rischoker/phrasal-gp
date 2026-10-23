@@ -296,7 +296,7 @@ function onEvent(ev) {
   if (ev.type === 'answer') {
     raceView.answerPop(ev.id, ev.correct);
     if (ev.correct) sfx.ok();
-    if (ev.power) { feed('<b>' + name + '</b> 5 IN A ROW! POWER-UP READY ⚡', col); sfx.streak(); C.say(C.L.streak, { name: p ? p.name : '' }, 1, 'streak' + ev.id, 15000); }
+    if (ev.power) { feed('<b>' + name + '</b> ' + (ev.catchup ? 'GETS A CATCH-UP POWER 🔋' : '3 IN A ROW! POWER-UP READY ⚡'), col); sfx.streak(); C.say(ev.catchup ? C.L.catchup : C.L.streak, { name: p ? p.name : '' }, 1, 'streak' + ev.id, 15000); }
   } else if (ev.type === 'lap') {
     if (ev.fastest) {
       feed('FASTEST LAP · <b>' + name + '</b> · ' + fmtTime(ev.time), col, 'purple'); sfx.fastest();

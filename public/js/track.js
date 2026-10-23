@@ -97,4 +97,19 @@ export const CIRCUITS = [
     cmds: 'SSSSSSS r S r S l r SSS r SSSS r',
     blurb: 'Fast park circuit with an S-bend in the middle.',
   },
+  {
+    id: 'paris', name: 'Paris Grand Prix', short: 'PARIS', flag: 'FR', theme: 'paris',
+    cmds: 'SSSSSSSS r SSS R R L S L r SSSSS r SSS r',
+    blurb: 'Round the Eiffel Tower, with a hairpin by the Arc de Triomphe.',
+  },
+  {
+    id: 'cairo', name: 'Cairo Grand Prix', short: 'CAIRO', flag: 'EG', theme: 'desert',
+    cmds: 'SSSSSSS r SSS r SSSSSSS r S L R R L r',
+    blurb: 'Desert sprint past the Pyramids and the Sphinx, by the Nile.',
+  },
+  {
+    id: 'rio', name: 'Rio de Janeiro Grand Prix', short: 'RIO', flag: 'BR', theme: 'tropical',
+    cmds: 'SSSSS r L R SS r SSSSSSSS r SSS R R L L r',
+    blurb: 'Beach circuit around the Maracanã, under Christ the Redeemer.',
+  },
 ];

@@ -16,7 +16,7 @@ export function initAudio() {
 export function setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.05); for (const k in fileEls) fileEls[k].muted = m; for (const k in voiceEls) voiceEls[k].muted = m; }
 
 // ---- recorded music & voice lines (served by our own server: proxy-safe) ----
-const FILE_SONGS = { lobby: { src: 'assets/audio/lobby.mp3', vol: 0.55 }, race: { src: 'assets/audio/race.mp3', vol: 0.42 } };
+const FILE_SONGS = { lobby: { src: 'assets/audio/lobby.mp3', vol: 0.55 }, race: { src: 'assets/audio/race.mp3', vol: 0.42 }, podium: { src: 'assets/audio/podium.mp3', vol: 0.7 } };
 const VOICES = { choose: 'assets/audio/choose-your-car.mp3', ready: 'assets/audio/get-ready.mp3' };
 const fileEls = {}, voiceEls = {};
 let fileSong = null, duck = 1;
@@ -146,7 +146,7 @@ export function playSong(name) {
     if (fileSong !== name) {
       fileSong = name;
       const a = fileEl(name);
-      if (name === 'race') { try { a.currentTime = 0; } catch (e) { } }
+      if (name !== 'lobby') { try { a.currentTime = 0; } catch (e) { } }
       a.play().catch(() => {});
       fadeTo(a, FILE_SONGS[name].vol * duck, 900);
     }

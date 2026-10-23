@@ -42,7 +42,7 @@
     <img id="countCar" class="bigcar" alt="">
     <div class="lights"><i></i><i></i><i></i><i></i><i></i></div>
     <h2 id="countTxt">GET READY</h2>
-    <p class="hint">Correct answer = faster car.<br>Wrong answer = you slow down.<br>5 in a row = POWER-UP!</p>
+    <p class="hint">Correct answer = faster car.<br>Wrong answer = you slow down.<br>3 in a row = POWER-UP!</p>
   </section>
 
   <!-- RACE -->
@@ -66,7 +66,7 @@
   <!-- POWER-UP PICKER -->
   <div id="power" class="overlay hidden">
     <h2>POWER-UP!</h2>
-    <p>5 correct in a row — choose one:</p>
+    <p id="powerWhy">3 correct in a row — choose one:</p>
     <div class="powers">
       <button data-p="turbo"><span>🚀</span><b>TURBO</b><small>Super speed for you</small></button>
       <button data-p="shrink"><span>⚡</span><b>MINI-RAY</b><small>Shrink &amp; slow everyone</small></button>
@@ -98,6 +98,11 @@
       <div id="resStats" class="rstats"></div>
       <p id="resHead" class="rhead"></p>
       <div id="resMissed" class="missed"></div>
+    </div>
+    <div class="dl">
+      <a id="dlReview" class="big dlbtn" href="#">📥 DOWNLOAD MY REVIEW</a>
+      <a id="openReview" class="ghost dlopen" href="#" target="_blank">👁 OPEN / SAVE AS PDF</a>
+      <p class="hint small">Your study sheet with every phrasal verb you missed, the meanings and a practice quiz. Download it before you leave class!</p>
     </div>
     <p class="hint">Wait for the next race…</p>
   </section>

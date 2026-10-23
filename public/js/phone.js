@@ -231,7 +231,7 @@
         fb.className = 'fb hidden';
         answering = false;
         if (res.next) showQuestion(res.next);
-        if (res.power) openPower();
+        if (res.power) { $('powerWhy').textContent = res.catchup ? 'Catch-up power! Use it to get back in the race:' : '3 correct in a row — choose one:'; openPower(); }
       }, res.correct ? 650 : 2300);
     });
   }
@@ -288,6 +288,10 @@
     var m = '';
     f.missed.forEach(function (x) { var mm = x.meaning.split('='); m += '<div><b>' + fmtOpt(x.answer) + '</b> — ' + esc(mm.length > 1 ? mm.slice(1).join('=') : x.meaning) + '</div>'; });
     $('resMissed').innerHTML = m ? '<p style="font-weight:900;letter-spacing:2px;margin:12px 0 4px">REVIEW</p>' + m : '';
+    var base = '/review/' + encodeURIComponent(st.code) + '/' + encodeURIComponent(me.id) + '?t=' + encodeURIComponent(me.token);
+    $('dlReview').href = base + '&dl=1';
+    $('dlReview').setAttribute('download', 'PhrasalGP-review-' + me.name.replace(/[^A-Za-z0-9]+/g, '_') + '.html');
+    $('openReview').href = base;
   }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }

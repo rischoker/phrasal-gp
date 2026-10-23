@@ -4,6 +4,7 @@ import { buildTrack } from '../track.js';
 import * as A from './assets.js';
 import { Particles } from './fx.js';
 import { sfx } from './audio.js';
+import { landmarkFor, backgroundFor } from './landmarks.js';
 
 export const TILE = 4;
 const START_CELLS = 3; // start line after 3 straight cells
@@ -14,6 +15,9 @@ const THEMES = {
   andes: { ground: 0x739f52, infield: 0x80b35d, bg: 0x6aa0c8, mountains: true, buildings: 'colorful', trees: 0.45, sun: 0xfff3dc, hemi: [0xd8ecff, 0x5a7048], night: false },
   riviera: { ground: 0xcdbb92, infield: 0x7fb05e, bg: 0x1f78a8, water: 'south', buildings: 'cream', trees: 0.3, palms: true, sun: 0xfff0c8, hemi: [0xe6f3ff, 0x8a7a58], night: false },
   night: { ground: 0x1c2333, infield: 0x22303a, bg: 0x070912, buildings: 'neon', trees: 0.15, sun: 0x8fa8ff, hemi: [0x34406a, 0x101018], night: true },
+  paris: { ground: 0x5a9a4a, infield: 0x67ad55, bg: 0x2f5f2c, buildings: 'haussmann', trees: 0.55, sun: 0xfff3dc, hemi: [0xdbe9ff, 0x56704a], night: false },
+  desert: { ground: 0xd9b97a, infield: 0xe2c78f, bg: 0xc9a46a, water: 'south', buildings: 'sandstone', trees: 0.12, palms: true, sun: 0xffe9c4, hemi: [0xfff1dc, 0x9a7d50], night: false },
+  tropical: { ground: 0x4fa047, infield: 0x5cb352, bg: 0x1f78a8, water: 'south', buildings: 'colorful', trees: 0.5, palms: true, sun: 0xfff2d0, hemi: [0xe1f2ff, 0x56704a], night: false },
   park: { ground: 0x4c9845, infield: 0x58a94f, bg: 0x2f5f2c, buildings: 'brick', trees: 0.7, sun: 0xfff6e0, hemi: [0xd6eaff, 0x4d6a3f], night: false },
 };
 
@@ -65,6 +69,8 @@ export class RaceView {
     sun.position.set(cx - 30, 70, cz + 30); sun.target.position.set(cx, 0, cz);
 
     await Promise.all([this.buildGround(), this.buildTiles(), this.buildKerbs(), this.buildStart()]);
+    this.excl = [];
+    this.placeLandmarks();
     await this.buildDecor();
     this.ps = new Particles(1800, 1);
     S.add(this.ps.points);
@@ -256,6 +262,7 @@ export class RaceView {
     for (let x = Math.floor(b.minX) - M; x <= Math.ceil(b.maxX) + M; x++) {
       for (let z = Math.floor(b.minZ) - M + 1; z <= Math.ceil(b.maxZ) + M; z++) {
         if (cells.has(x + ',' + z)) continue;
+        if (this.excl.some(e => (x * TILE - e.x) ** 2 + (z * TILE - e.z) ** 2 < (e.r + 2.2) ** 2)) continue;
         const wx = x * TILE, wz = z * TILE;
         if (this.waterEdge && (this.waterEdge.north ? wz < this.waterEdge.z + 1 : wz > this.waterEdge.z - 1)) continue;
         const inside = this.inside(wx, wz);
@@ -335,6 +342,8 @@ export class RaceView {
       colorful: [0xf2c14e, 0xe76f51, 0x2a9d8f, 0xf4a261, 0x9b5de5, 0xfefae0],
       cream: [0xf4ead5, 0xe9d8b4, 0xf7e1d7, 0xdbe7e4, 0xfff4e0],
       neon: [0x3a4166, 0x2c3358, 0x46507a, 0x343b62],
+      haussmann: [0xefe6d2, 0xe7dcc3, 0xf3ecdc, 0xdcd2bb],
+      sandstone: [0xd8b98a, 0xc9a875, 0xe3caa0, 0xbf9a66, 0xf0e2c4],
     };
     const pal = palettes[th.buildings] || palettes.brick;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color();
@@ -398,6 +407,38 @@ export class RaceView {
     for (const [x, z] of list.slice(0, 40)) {
       const l = src.clone(); l.scale.setScalar(TILE * 0.9); l.position.set(x, 0, z); l.rotation.y = Math.random() * 6; this.scene.add(l);
       if (glow) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: 0xffd98a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.set(3, 3, 1); s.position.set(x, 2.1, z); this.scene.add(s); }
+    }
+  }
+
+  // City landmark in the biggest open part of the infield (+ optional background landmark)
+  placeLandmarks() {
+    const lm = landmarkFor(this.circuit.id);
+    const P = this.path.filter((_, i) => i % 2 === 0);
+    if (lm) {
+      const b = this.bounds; let best = null;
+      for (let x = b.minX + 2; x <= b.maxX - 2; x += 1) for (let z = b.minZ + 2; z <= b.maxZ - 2; z += 1) {
+        if (!this.inside(x, z)) continue;
+        let c = 1e9; for (const p of P) { const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < c) c = d; }
+        c = Math.sqrt(c);
+        const score = c + 0.12 * (z - this.center.z);
+        if (!best || score > best.score) best = { x, z, c, score };
+      }
+      if (best) {
+        const scale = Math.min(1.15, (best.c - ROAD_HALF - 0.7) / lm.radius);
+        if (scale > 0.35) {
+          lm.group.scale.setScalar(scale);
+          lm.group.position.set(best.x, 0, best.z);
+          this.scene.add(lm.group);
+          this.excl.push({ x: best.x, z: best.z, r: lm.radius * scale });
+          if (lm.animate) this.lmAnim = lm.animate;
+        }
+      }
+    }
+    const bg = backgroundFor(this.circuit.id);
+    if (bg) {
+      const x = this.bounds.minX + (this.bounds.maxX - this.bounds.minX) * 0.16, z = this.bounds.minZ - 13;
+      bg.position.set(x, 0, z); this.scene.add(bg);
+      this.excl.push({ x, z, r: 7 });
     }
   }
 
@@ -627,6 +668,7 @@ export class RaceView {
       if (B.t > 0.5) { this.scene.remove(B.line); B.line.geometry.dispose(); this.bolts.splice(i, 1); }
     }
     if (this.waterTex) this.waterTex.offset.x = this.time * 0.01;
+    if (this.lmAnim) this.lmAnim(this.time);
     if (this.boats) for (const b of this.boats) b.position.y = 0.05 + Math.sin(this.time * 1.4 + b.userData.bob) * 0.06;
     if (this.crowd && raceRunning) {
       const m = new THREE.Matrix4(); const im = this.crowd.im;

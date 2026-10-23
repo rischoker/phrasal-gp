@@ -7,6 +7,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const { BANK, LEVELS } = require('./data/questions');
 const LB = require('./leaderboard');
+const { reviewHtml } = require('./review');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -20,6 +21,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', req.query.host ? 'host.html' : 'phone.html'));
 });
 app.get('/host', (req, res) => res.redirect('/?host=1'));
+app.get('/review/:code/:pid', (req, res) => {
+  const room = rooms.get(String(req.params.code).toUpperCase());
+  const p = room && room.players.get(req.params.pid);
+  const rv = room && room.reviews && room.reviews[req.params.pid];
+  if (!p || !rv || p.token !== req.query.t) return res.status(404).send('<meta name="viewport" content="width=device-width"><p style="font-family:sans-serif">This review is no longer available (the room was closed). Ask your teacher for a new race!</p>');
+  res.set('Cache-Control', 'no-store');
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  if (req.query.dl) res.set('Content-Disposition', 'attachment; filename="PhrasalGP-review-' + p.name.replace(/[^A-Za-z0-9]+/g, '_') + '.html"');
+  res.send(reviewHtml(rv));
+});
 app.get('/api/leaderboard', async (req, res) => {
   res.set('Cache-Control', 'no-cache');
   const laps = LAP_OPTIONS.includes(+req.query.laps) ? +req.query.laps : 5;
@@ -63,7 +74,8 @@ const BASE_LAP_SECONDS = { 5: 34, 10: 26, 20: 19, 30: 15 };
 const TEST_SPEED = +process.env.PGP_TEST_SPEED || 1; // dev only: faster races for testing
 const MAX_PLAYERS = 6;
 const POWERS = ['turbo', 'shrink', 'missile', 'shield'];
-const STREAK_FOR_POWER = 5;
+const STREAK_FOR_POWER = 3;
+const TRAILING_GAP = 0.18; // laps behind the leader to count as 'far behind'
 const CP_PER_LAP = 24; // timing checkpoints per lap (sectors at 8 and 16)
 const TICK_MS = 100;
 
@@ -91,7 +103,7 @@ function newRoom(hostToken) {
 }
 
 function freshStats() {
-  return { correct: 0, wrong: 0, streak: 0, bestStreak: 0, powersUsed: 0, missed: [], byParticle: {} };
+  return { correct: 0, wrong: 0, streak: 0, bestStreak: 0, powersUsed: 0, missed: [], byParticle: {}, log: [] };
 }
 
 function newPlayer(room, name, token) {
@@ -209,7 +221,8 @@ function speedOf(room, p, t, leaderDist) {
   if (p.finished) return 0.35 / room.race.baseLap; // cool-down lap
   let s = p.momentum * effectMult(p, t);
   const behind = leaderDist - p.dist;
-  if (behind > 0.6) s *= 1.15; else if (behind > 0.3) s *= 1.08; // gentle catch-up for slower students
+  // catch-up for slower students: keeps the whole class in the same part of the race
+  if (behind > 0.5) s *= 1.32; else if (behind > 0.3) s *= 1.2; else if (behind > 0.15) s *= 1.1;
   return s / room.race.baseLap;
 }
 
@@ -283,7 +296,7 @@ function tickRoom(room, t) {
         const done = (r.flagAt == null && p.lapsDone >= r.laps) || (r.flagAt != null && p.lapsDone >= p.finishTarget);
         if (done) {
           if (r.flagAt == null) {
-            r.flagAt = ct; r.endsAt = ct + 45000;
+            r.flagAt = ct; r.endsAt = ct + 30000;
             for (const o of players) if (o !== p && !o.finished) o.finishTarget = Math.floor(o.dist) + 1;
           }
           p.finished = true; p.finishTime = ct - r.greenAt; p.q = null;
@@ -404,6 +417,12 @@ function finishRace(room) {
       };
     }),
   };
+  // personal study sheets (downloadable from the phone until the room closes)
+  room.reviews = {};
+  for (const row of room.results.rows) {
+    const p = room.players.get(row.id);
+    room.reviews[p.id] = Object.assign({}, row, { circuit: room.results.circuit, level: room.results.level, laps: r.laps, date: t, log: p.stats.log.slice() });
+  }
   room.state = 'finished';
   for (const p of players) p.q = null;
   emitRoom(room);
@@ -422,6 +441,16 @@ function finishRace(room) {
 }
 
 // ---------- answers & powers ----------
+// Last two cars (last one in a 2-car race) that are far behind the leader get catch-up power-ups
+function isTrailing(room, p) {
+  const active = [...room.players.values()].filter(o => !o.finished);
+  if (active.length < 2 || p.finished) return false;
+  const order = active.slice().sort((a, b) => b.dist - a.dist);
+  const idx = order.indexOf(p);
+  const tail = active.length >= 3 ? 2 : 1;
+  return idx >= order.length - tail && order[0].dist - p.dist > TRAILING_GAP;
+}
+
 function handleAnswer(room, p, seq, choice) {
   if (room.state !== 'race' || !p.q || p.finished) return { error: 'not-active' };
   if (seq !== p.qSeq) return { error: 'stale', question: questionForPhone(p) };
@@ -430,21 +459,23 @@ function handleAnswer(room, p, seq, choice) {
   const correct = choice === q.correctIdx;
   const s = p.stats;
   const bp = s.byParticle[q.particle] || (s.byParticle[q.particle] = { c: 0, w: 0 });
-  let power = null;
+  let power = null, catchup = false;
+  s.log.push({ q: q.q, chosen: q.opts[choice] != null ? q.opts[choice] : '', answer: q.answer, correct, meaning: q.meaning, pv: q.pv });
   if (correct) {
     s.correct++; s.streak++; bp.c++;
     s.bestStreak = Math.max(s.bestStreak, s.streak);
     p.momentum = Math.min(1.7, p.momentum + 0.09);
     p.effects.boost = t + 2000;
-    if (s.streak % STREAK_FOR_POWER === 0 && !p.pendingPower) { p.pendingPower = true; power = POWERS; }
+    if (!p.pendingPower && s.streak % STREAK_FOR_POWER === 0) { p.pendingPower = true; power = POWERS; }
+    else if (!p.pendingPower && isTrailing(room, p)) { p.pendingPower = true; power = POWERS; catchup = true; }
   } else {
     s.wrong++; s.streak = 0; bp.w++;
     s.missed.push({ pv: q.pv, meaning: q.meaning, answer: q.answer, q: q.q });
     p.momentum = Math.max(0.45, p.momentum - 0.12);
     p.effects.stall = t + 1200;
   }
-  raceEvent(room, { type: 'answer', id: p.id, correct, streak: s.streak, power: !!power });
-  const result = { correct, correctIdx: q.correctIdx, answer: q.answer, meaning: q.meaning, streak: s.streak, power };
+  raceEvent(room, { type: 'answer', id: p.id, correct, streak: s.streak, power: !!power, catchup });
+  const result = { correct, correctIdx: q.correctIdx, answer: q.answer, meaning: q.meaning, streak: s.streak, power, catchup };
   result.next = nextQuestion(room, p);
   return result;
 }
@@ -646,7 +677,7 @@ setInterval(() => {
   for (const [code, room] of rooms) {
     const idle = t - room.lastActivity;
     const anyone = room.hostSocket || [...room.players.values()].some(p => p.connected);
-    if ((!anyone && idle > 30 * 60000) || idle > 6 * 3600000) rooms.delete(code);
+    if ((!anyone && idle > (room.reviews ? 3 * 3600000 : 30 * 60000)) || idle > 6 * 3600000) rooms.delete(code);
   }
 }, 60000);
 

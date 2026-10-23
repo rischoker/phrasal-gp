@@ -104,3 +104,7 @@ h1 { font-family: Orbitron, 'Arial Black', sans-serif; font-size: 44px; margin: 
 .missed div { border-top: 1px solid #2a2d42; padding: 6px 0; font-size: 15px; color: #c9cde0; }
 .missed b { color: #ffb4bb; }
 .rec { background: #c79a00; color: #fff; font-weight: 900; text-align: center; padding: 8px; margin-top: 8px; letter-spacing: 1px; }
+.dl { margin-top: 14px; text-align: center; }
+.dlbtn { display: block; text-decoration: none; text-align: center; background: #0f7a45; }
+.dlopen { display: block; text-decoration: none; text-align: center; margin: 10px 0 0; }
+.hint.small { font-size: 13px; font-weight: 600; margin-top: 8px; }

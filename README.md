@@ -8,17 +8,20 @@ Gana quien complete las vueltas en el menor tiempo.
 ## En clase
 1. En el PC del proyector abre `https://TU-SERVICIO.onrender.com/?host=1` (o `/host`). Haz clic en cualquier parte para activar el sonido. `F` = pantalla completa, `M` = silencio.
 2. Los estudiantes escanean el QR (o abren la URL y escriben el código de 4 letras), escriben su nombre y eligen carro (18 modelos, no se repiten). Máximo 6 pilotos.
-3. Elige **circuito** (Boston, Bogotá, Monte Carlo, Tokyo Night, London), **nivel** (A2, B1, B2, C1 o MIX) y **vueltas** (5 · 10 · 20 · 30) → **LIGHTS OUT**.
+3. Elige **circuito** (Boston, Bogotá, Monte Carlo, Tokyo Night, London, Paris, Cairo, Rio — cada uno con sus monumentos), **nivel** (A2, B1, B2, C1 o MIX) y **vueltas** (5 · 10 · 20 · 30) → **LIGHTS OUT**.
 4. Semáforo de 5 luces → carrera. Torre de tiempos estilo F1 (posición, gap, sectores morado/verde/amarillo), vueltas rápidas, mejores sectores, puntos (respuestas correctas) y “Race Control”.
 5. Bandera a cuadros → podio con los 3 primeros, trofeo bajando en un haz de luz, fuegos artificiales, confeti y música.
 6. **RACE REPORT & FEEDBACK**: tarjeta por estudiante para comentar desde el tablero: precisión con la meta del 80 %, correctas/incorrectas, mejor racha, tiempo y mejor vuelta, un comentario cualitativo, partículas fuertes (✓) y a repasar (↺) y los phrasal verbs que falló con su significado.
 
 Duración aproximada (grupo respondiendo bien): 5 vueltas ≈ 2–3 min · 10 ≈ 3–4 min · 20 ≈ 5 min · 30 ≈ 6 min. Con más errores, más largo.
 
+## Repaso en casa
+Al terminar, cada estudiante ve en su celular **📥 DOWNLOAD MY REVIEW**: una hoja de estudio (HTML que funciona sin internet) con los phrasal verbs que falló, su significado, la frase correcta, un mini-quiz para practicar y lo que acertó. También se puede abrir y guardar como PDF. Deben descargarla en clase (el servidor gratis de Render se duerme y borra las salas).
+
 ## Reglas
 - Cada acierto sube la “energía” del carro y da un impulso corto; cada error la baja y frena un momento. Si nadie responde, el carro va perdiendo energía poco a poco.
 - Ayuda suave para quien va muy atrás (para no desmotivar a los estudiantes más lentos). Cada estudiante responde a su ritmo.
-- **Racha de 5 correctas → power-up** en el celular: 🚀 Turbo · ⚡ Mini-Ray (encoge y frena a todos) · 🎯 Misil al líder (si tú vas primero, al segundo) · 🛡️ Escudo (bloquea el siguiente ataque). Se puede guardar para después.
+- **Racha de 3 correctas → power-up** (los 2 últimos, si van muy atrás, reciben un power-up de rescate con cada acierto) en el celular: 🚀 Turbo · ⚡ Mini-Ray (encoge y frena a todos) · 🎯 Misil al líder (si tú vas primero, al segundo) · 🛡️ Escudo (bloquea el siguiente ataque). Se puede guardar para después.
 - Cuando el líder termina, los demás terminan al cruzar la meta en su vuelta actual (regla F1), con un máximo de 45 s.
 - El profesor puede terminar la carrera con **END RACE** (doble clic) y quitar pilotos en el lobby (×).
 
